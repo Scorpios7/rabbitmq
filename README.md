@@ -1,0 +1,2 @@
+# rabbitmq
+rabbitmq for golang
