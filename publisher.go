@@ -23,6 +23,7 @@ func NewPublisher(option Option) *Publisher {
 	}
 	err = publisher.initChannel()
 	if err != nil {
+		publisher.Close()
 		panic(err)
 	}
 	return publisher

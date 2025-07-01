@@ -29,6 +29,7 @@ func NewConsumer(option Option) *Consumer {
 	}
 	err = consumer.initChannel()
 	if err != nil {
+		consumer.Close()
 		panic(err)
 	}
 	return consumer
