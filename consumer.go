@@ -92,7 +92,7 @@ func (consumer *Consumer) Consume(handler func(msg []byte) error) error {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			err := consumer.consumeMessage(index, handler)
+			err := consumer.handleMessage(index, handler)
 			if err != nil {
 				log.Println(err.Error())
 			}
@@ -102,7 +102,7 @@ func (consumer *Consumer) Consume(handler func(msg []byte) error) error {
 	return nil
 }
 
-func (consumer *Consumer) consumeMessage(index int, handler func(msg []byte) error) error {
+func (consumer *Consumer) handleMessage(index int, handler func(msg []byte) error) error {
 	channel := consumer.channel
 
 	deliveries, err := channel.Consume(
@@ -121,11 +121,19 @@ func (consumer *Consumer) consumeMessage(index int, handler func(msg []byte) err
 	for d := range deliveries {
 		err = handler(d.Body)
 		if err != nil {
+			// 消费异常, 需记录日志
 			log.Println(err.Error())
-		}
-		err = d.Ack(false)
-		if err != nil {
-			return err
+			// 丢到dlx
+			// TODO 引入重试机制重新入队消费, 超过一定次数后判断队列是否绑定了dlx, 若绑定了就丢到dlx, 否则就Nack
+			err = d.Nack(false, false)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = d.Ack(false)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

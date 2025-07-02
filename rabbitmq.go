@@ -1,6 +1,10 @@
 package rabbitmq
 
-import "github.com/streadway/amqp"
+import (
+	"github.com/pkg/errors"
+
+	"github.com/streadway/amqp"
+)
 
 const (
 	ExchangeDirect = "direct"
@@ -23,6 +27,20 @@ type Option struct {
 }
 
 func exchangeDeclare(channel *amqp.Channel, option Option) error {
+	if option.ExchangeName == "" {
+		return errors.New("Exchange name is empty")
+	}
+	isValidExchangeType := false
+	validExchangeTypes := []string{ExchangeDirect, ExchangeFanout, ExchangeTopic}
+	for _, t := range validExchangeTypes {
+		if option.ExchangeType == t {
+			isValidExchangeType = true
+		}
+	}
+	if !isValidExchangeType {
+		return errors.New("Invalid exchange type")
+	}
+
 	return channel.ExchangeDeclare(
 		option.ExchangeName,
 		option.ExchangeType,
@@ -35,6 +53,10 @@ func exchangeDeclare(channel *amqp.Channel, option Option) error {
 }
 
 func queueDeclare(channel *amqp.Channel, option Option) (amqp.Queue, error) {
+	if option.QueueName == "" {
+		return amqp.Queue{}, errors.New("queue name is empty")
+	}
+
 	args := amqp.Table{}
 	if option.Dlx != "" && option.DlxRoutingKey != "" {
 		args = amqp.Table{
@@ -53,6 +75,16 @@ func queueDeclare(channel *amqp.Channel, option Option) (amqp.Queue, error) {
 }
 
 func queueBind(channel *amqp.Channel, option Option) error {
+	if option.QueueName == "" {
+		return errors.New("Queue name is empty")
+	}
+	if option.ExchangeName == "" {
+		return errors.New("Exchange name is empty")
+	}
+	if option.BindingKey == "" {
+		return errors.New("Binding key is empty")
+	}
+
 	return channel.QueueBind(
 		option.QueueName,
 		option.BindingKey,
